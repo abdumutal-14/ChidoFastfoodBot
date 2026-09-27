@@ -17,16 +17,31 @@ async function load() {
   const res = await fetch("/api/menu");
   state.data = await res.json();
   state.currentCategory = Object.keys(state.data.menu)[0];
+  renderPromotions();
   renderCategories();
   renderProducts();
   fillBranches();
 }
 function catTitle(k) {
-  return {
-    lavash:"🌯 Lavash", burger:"🍔 Burger", pizza:"🍕 Pizza",
-    hotdog:"🌭 Hot-dog", set:"🍱 Setlar", drink:"🥤 Ichimliklar"
-  }[k] || k;
+  const c = state.data?.categories?.find(x => x.slug === k);
+  return c ? `${c.emoji || "🍽️"} ${c.name}` : k;
 }
+function renderPromotions() {
+  const box = $("#promotions");
+  const promos = state.data?.promotions || [];
+  if (!promos.length) {
+    box.innerHTML = "";
+    return;
+  }
+  box.innerHTML = promos.map(p => `
+    <div style="background:linear-gradient(135deg,#ed0033,#ff526e);color:white;border-radius:18px;padding:14px;margin-bottom:14px">
+      <b style="font-size:12px;opacity:.85">${escapeHtml(p.badge || "AKSIYA")}</b>
+      <div style="font-size:18px;font-weight:900;margin-top:4px">${escapeHtml(p.title)}</div>
+      <div style="font-size:13px;margin-top:4px;opacity:.94">${escapeHtml(p.description || "")}</div>
+    </div>
+  `).join("");
+}
+
 function renderCategories() {
   $("#categories").innerHTML = Object.keys(state.data.menu).map(k =>
     `<button class="category-btn ${k===state.currentCategory?"active":""}" data-cat="${k}">${catTitle(k)}</button>`
@@ -43,7 +58,7 @@ function renderProducts() {
   const products = state.data.menu[state.currentCategory] || [];
   $("#products").innerHTML = products.map(p => `
     <article class="product">
-      <div class="product-art">${p.emoji || "🍽️"}</div>
+      <div class="product-art">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}">` : (p.emoji || "🍽️")}</div>
       <h3>${escapeHtml(p.name)}</h3>
       <p>${escapeHtml(p.desc || "")}</p>
       <div class="price">${money(p.price)}</div>
