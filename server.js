@@ -202,8 +202,8 @@ app.post("/api/orders",async(req,res)=>{
 
     const order=await db.createOrder({
       id:orderId(),
-      userId:tgUser?.id||b.userId||null,
-      username:tgUser?.username||b.username||null,
+      userId:tgUser?.id||null,
+      username:tgUser?.username||null,
       customerName:tgUser
         ? ([tgUser.first_name,tgUser.last_name].filter(Boolean).join(" ")||"Mijoz")
         : (b.customerName||"Mijoz"),
@@ -403,21 +403,22 @@ app.get("/health",async(req,res)=>{
       database:true,
       databaseTime:h.now,
       webappUrl:WEBAPP_URL||null,
-      version:"5.0.0"
+      version:"5.1.1",
+      telegramOrderHistoryFix:true
     })
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.1.0"
+      webappUrl:WEBAPP_URL||null,version:"5.1.1"
     })
   }
 });
 
 async function start(){
   await db.initDatabase();
-  console.log("✅ PostgreSQL ulandi va v5 schema tayyor.");
+  console.log("✅ PostgreSQL ulandi. Chido v5.1.1 Order History fix faol.");
   setupBot();
-  app.listen(PORT,"0.0.0.0",()=>console.log(`✅ Chido v5 server port ${PORT}`));
+  app.listen(PORT,"0.0.0.0",()=>console.log(`✅ Chido v5.1.1 server port ${PORT}`));
 }
 
 start().catch(e=>{

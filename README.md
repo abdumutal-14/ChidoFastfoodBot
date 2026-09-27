@@ -60,3 +60,9 @@ Yangi SQL jadvali: `promotions`.
 
 ## v5.1 — Buyurtmalarim fix
 Mini App endi Telegram initData'ni serverga yuboradi. Server BOT_TOKEN bilan tekshiradi va haqiqiy Telegram user ID'ni buyurtmaga saqlaydi. Patchdan keyin berilgan yangi buyurtmalar `📦 Buyurtmalarim` bo'limida ko'rinadi.
+
+## v5.1.1 FINAL FIX
+
+- `/health` endi `version: "5.1.1"` va `telegramOrderHistoryFix: true` ko'rsatadi.
+- Buyurtmaga Telegram user ID faqat server tekshirgan Telegram `initData` orqali yoziladi.
+- Telegram Mini App'dan fixdan keyin berilgan yangi buyurtmalar `📦 Buyurtmalarim`da ko'rinadi.
