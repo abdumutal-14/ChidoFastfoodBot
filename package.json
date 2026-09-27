@@ -1,8 +1,8 @@
 {
   "name": "chido-fastfood-bot-v2",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "private": true,
-  "description": "Chido Fastfood Telegram bot + Mini App + Admin Panel + Railway PostgreSQL",
+  "description": "Chido Fastfood Telegram bot + Mini App + PostgreSQL + advanced admin panel",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
