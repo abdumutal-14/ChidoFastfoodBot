@@ -66,3 +66,15 @@ Mini App endi Telegram initData'ni serverga yuboradi. Server BOT_TOKEN bilan tek
 - `/health` endi `version: "5.1.1"` va `telegramOrderHistoryFix: true` ko'rsatadi.
 - Buyurtmaga Telegram user ID faqat server tekshirgan Telegram `initData` orqali yoziladi.
 - Telegram Mini App'dan fixdan keyin berilgan yangi buyurtmalar `📦 Buyurtmalarim`da ko'rinadi.
+
+
+## v5.2.0 — Telegram identity fix
+
+Asosiy sabab: Telegram hujjatlariga ko‘ra Reply Keyboard ichidagi `web_app` tugmasidan ochilgan Mini App `WebAppInitData.user` bermaydi. Shu sabab buyurtma `telegram_user_id = NULL` bo‘lib qolgan.
+
+v5.2:
+- Mini App endi inline Web App tugmasidan ochiladi.
+- `/start` yuborganda bot alohida `🍔 MENYU / BUYURTMA` inline tugmasini yuboradi.
+- Inline launch Telegram user ID ni `initData` orqali beradi.
+- Server initData ni BOT_TOKEN bilan tekshiradi.
+- Eski keyboard usulida ochilsa Mini App buyurtmani yubormaydi va qayta `/start` qilishni aytadi.

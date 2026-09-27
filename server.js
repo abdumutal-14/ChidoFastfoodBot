@@ -96,16 +96,33 @@ function setupBot(){
   bot=new Telegraf(BOT_TOKEN);
 
   const mainKeyboard=()=>Markup.keyboard([
-    ...(WEBAPP_URL?[[Markup.button.webApp("🍔 MENYU / BUYURTMA",`${WEBAPP_URL}/`)]]:[]),
     ["📦 Buyurtmalarim","🔥 Aksiyalar"],
     ["📍 Filiallar","☎️ Aloqa"]
   ]).resize();
 
-  bot.start(ctx=>ctx.reply(
-    `Assalomu alaykum, ${ctx.from.first_name||"mijoz"}! 👋\n\n`+
-    `🍔 Chido Fastfood botiga xush kelibsiz.\n🚚 Yetkazib berish bepul.`,
-    mainKeyboard()
-  ));
+  async function sendMiniAppButton(ctx){
+    if(!WEBAPP_URL){
+      return ctx.reply("Mini App URL sozlanmagan.");
+    }
+    return ctx.reply(
+      "🍔 Buyurtma berish uchun quyidagi tugmani bosing:",
+      Markup.inlineKeyboard([
+        [Markup.button.webApp("🍔 MENYU / BUYURTMA",`${WEBAPP_URL}/`)]
+      ])
+    );
+  }
+
+  bot.start(async ctx=>{
+    await ctx.reply(
+      `Assalomu alaykum, ${ctx.from.first_name||"mijoz"}! 👋\n\n`+
+      `🍔 Chido Fastfood botiga xush kelibsiz.\n🚚 Yetkazib berish bepul.`,
+      mainKeyboard()
+    );
+    await sendMiniAppButton(ctx);
+  });
+
+  bot.command("menu",sendMiniAppButton);
+  bot.hears("🍔 MENYU / BUYURTMA",sendMiniAppButton);
 
   bot.command("setadmin",async ctx=>{
     if(ctx.chat.type==="private")return ctx.reply("Bu komanda admin guruh ichida ishlatiladi.");
@@ -403,22 +420,22 @@ app.get("/health",async(req,res)=>{
       database:true,
       databaseTime:h.now,
       webappUrl:WEBAPP_URL||null,
-      version:"5.1.1",
-      telegramOrderHistoryFix:true
+      version:"5.2.0",
+      telegramOrderHistoryFix:true,miniAppLaunchMode:"inline"
     })
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.1.1"
+      webappUrl:WEBAPP_URL||null,version:"5.2.0"
     })
   }
 });
 
 async function start(){
   await db.initDatabase();
-  console.log("✅ PostgreSQL ulandi. Chido v5.1.1 Order History fix faol.");
+  console.log("✅ PostgreSQL ulandi. Chido v5.2.0 Inline Mini App identity fix faol.");
   setupBot();
-  app.listen(PORT,"0.0.0.0",()=>console.log(`✅ Chido v5.1.1 server port ${PORT}`));
+  app.listen(PORT,"0.0.0.0",()=>console.log(`✅ Chido v5.2.0 server port ${PORT}`));
 }
 
 start().catch(e=>{
