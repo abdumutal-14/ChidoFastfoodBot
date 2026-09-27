@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Chido Admin</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Arial;background:#f3f5f8;color:#17191d}
+    header{background:#ed0033;color:#fff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center}
+    header h1{font-size:20px;margin:0}.wrap{max-width:1100px;margin:auto;padding:18px}
+    .login,.order{background:#fff;border:1px solid #e7e9ee;border-radius:16px;padding:16px;margin-bottom:12px}
+    input,select,button{font:inherit;border-radius:10px;padding:10px 12px;border:1px solid #dfe2e7}
+    button{cursor:pointer}.red{background:#ed0033;color:#fff;border:0;font-weight:800}.muted{color:#727782}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.badge{display:inline-block;background:#f0f1f4;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800}
+    .items{background:#fafbfc;border-radius:12px;padding:10px;margin:10px 0}.row{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><h1>🍔 Chido Fastfood Admin</h1><span id="count"></span></header>
+<div class="wrap">
+  <div class="login" id="loginBox">
+    <b>Admin parol</b>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="password" type="password" placeholder="Parol" style="flex:1">
+      <button class="red" id="loginBtn">Kirish</button>
+    </div>
+    <p class="muted">Default: chido2026 (keyin .env orqali o‘zgartiring)</p>
+  </div>
+  <div id="orders"></div>
+</div>
+<script>
+let password = localStorage.getItem("chidoAdminPassword") || "";
+const money = n => Number(n).toLocaleString("uz-UZ")+" so‘m";
+const statusText = s => ({
+  accepted:"🟡 Qabul qilindi",cooking:"👨‍🍳 Tayyorlanmoqda",
+  courier:"🛵 Kuryerga berildi",ready:"✅ Olib ketishga tayyor",
+  completed:"✅ Yakunlandi",cancelled:"❌ Bekor qilindi"
+}[s]||s);
+async function load(){
+  if(!password) return;
+  const res=await fetch("/api/admin/orders",{headers:{"x-admin-password":password}});
+  if(res.status===401){localStorage.removeItem("chidoAdminPassword");password="";document.getElementById("orders").innerHTML="<p>Parol noto‘g‘ri.</p>";return;}
+  const data=await res.json();
+  document.getElementById("loginBox").style.display="none";
+  document.getElementById("count").textContent=data.orders.length+" ta buyurtma";
+  document.getElementById("orders").innerHTML=data.orders.map(o=>`
+    <div class="order">
+      <div class="row">
+        <div><b>#${o.id}</b> <span class="badge">${statusText(o.status)}</span></div>
+        <b>${money(o.total)}</b>
+      </div>
+      <div class="grid" style="margin-top:12px">
+        <div><span class="muted">Mijoz</span><br><b>${esc(o.customerName||"Mijoz")}</b><br>${esc(o.phone||"")}</div>
+        <div><span class="muted">Filial</span><br><b>${esc(o.branch)}</b><br>${o.type==="delivery"?"🚚 Yetkazib berish":"🏪 Olib ketish"}</div>
+        <div><span class="muted">To‘lov</span><br><b>${esc(o.payment)}</b><br>${new Date(o.createdAt).toLocaleString()}</div>
+      </div>
+      ${o.address?`<p>📍 ${esc(o.address)}</p>`:""}
+      ${o.comment?`<p>💬 ${esc(o.comment)}</p>`:""}
+      <div class="items">${o.items.map(x=>`${esc(x.name)} — ${x.qty} × ${money(x.price)}`).join("<br>")}</div>
+      <div class="row">
+        <select data-id="${o.id}" class="status">
+          ${["accepted","cooking","courier","ready","completed","cancelled"].map(s=>`<option value="${s}" ${s===o.status?"selected":""}>${statusText(s)}</option>`).join("")}
+        </select>
+        <button class="red save" data-id="${o.id}">Statusni saqlash</button>
+      </div>
+    </div>`).join("");
+  document.querySelectorAll(".save").forEach(btn=>btn.onclick=()=>saveStatus(btn.dataset.id));
+}
+async function saveStatus(id){
+  const status=document.querySelector(`select[data-id="${id}"]`).value;
+  const res=await fetch(`/api/admin/orders/${id}/status`,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json","x-admin-password":password},
+    body:JSON.stringify({status})
+  });
+  if(res.ok) load(); else alert("Status saqlanmadi");
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+document.getElementById("loginBtn").onclick=()=>{password=document.getElementById("password").value;localStorage.setItem("chidoAdminPassword",password);load();}
+if(password)load();
+setInterval(()=>{if(password)load()},10000);
+</script>
+</body>
+</html>

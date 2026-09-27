@@ -1,0 +1,133 @@
+{
+  "lavash": [
+    {
+      "id": 101,
+      "name": "Chido Lavash",
+      "price": 32000,
+      "desc": "Mol go'shti, sabzavotlar va maxsus sous",
+      "emoji": "🌯"
+    },
+    {
+      "id": 102,
+      "name": "Pishloqli Lavash",
+      "price": 36000,
+      "desc": "Mol go'shti, pishloq, sabzavotlar va sous",
+      "emoji": "🌯"
+    },
+    {
+      "id": 103,
+      "name": "Tovuqli Lavash",
+      "price": 30000,
+      "desc": "Tovuq go'shti, sabzavotlar va maxsus sous",
+      "emoji": "🌯"
+    }
+  ],
+  "burger": [
+    {
+      "id": 201,
+      "name": "Chido Burger",
+      "price": 35000,
+      "desc": "Kotlet, pishloq, sabzavotlar va sous",
+      "emoji": "🍔"
+    },
+    {
+      "id": 202,
+      "name": "Double Burger",
+      "price": 44000,
+      "desc": "Ikki kotlet, pishloq va maxsus sous",
+      "emoji": "🍔"
+    },
+    {
+      "id": 203,
+      "name": "Chicken Burger",
+      "price": 33000,
+      "desc": "Tovuq kotleti, sabzavot va sous",
+      "emoji": "🍔"
+    }
+  ],
+  "pizza": [
+    {
+      "id": 301,
+      "name": "Pepperoni Pizza",
+      "price": 79000,
+      "desc": "Pepperoni, mozzarella va pomidor sousi",
+      "emoji": "🍕"
+    },
+    {
+      "id": 302,
+      "name": "Chicken Pizza",
+      "price": 76000,
+      "desc": "Tovuq, mozzarella, pomidor va sous",
+      "emoji": "🍕"
+    },
+    {
+      "id": 303,
+      "name": "Mix Pizza",
+      "price": 85000,
+      "desc": "Go'sht, tovuq, pishloq va sabzavotlar",
+      "emoji": "🍕"
+    }
+  ],
+  "hotdog": [
+    {
+      "id": 401,
+      "name": "Hot-dog",
+      "price": 22000,
+      "desc": "Sosiska, sabzavot va sous",
+      "emoji": "🌭"
+    },
+    {
+      "id": 402,
+      "name": "Double Hot-dog",
+      "price": 29000,
+      "desc": "Ikki sosiska, sabzavot va sous",
+      "emoji": "🌭"
+    }
+  ],
+  "set": [
+    {
+      "id": 501,
+      "name": "Chido Set",
+      "price": 59000,
+      "desc": "Burger, fri va ichimlik",
+      "emoji": "🍱"
+    },
+    {
+      "id": 502,
+      "name": "Family Set",
+      "price": 149000,
+      "desc": "Oilaviy combo: burgerlar, fri va ichimliklar",
+      "emoji": "🍱"
+    }
+  ],
+  "drink": [
+    {
+      "id": 601,
+      "name": "Coca-Cola 0.5L",
+      "price": 9000,
+      "desc": "Sovutilgan ichimlik",
+      "emoji": "🥤"
+    },
+    {
+      "id": 602,
+      "name": "Coca-Cola 1L",
+      "price": 13000,
+      "desc": "Sovutilgan ichimlik",
+      "emoji": "🥤"
+    },
+    {
+      "id": 603,
+      "name": "Fanta 1L",
+      "price": 13000,
+      "desc": "Sovutilgan ichimlik",
+      "emoji": "🥤"
+    },
+    {
+      "id": 604,
+      "name": "Suv 0.5L",
+      "price": 5000,
+      "desc": "Ichimlik suvi",
+      "emoji": "💧"
+    }
+  ]
+}
