@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const path=require("path");
+const crypto=require("crypto");
 const express=require("express");
 const {Telegraf,Markup}=require("telegraf");
 const db=require("./db");
@@ -13,6 +14,45 @@ const PORT=Number(process.env.PORT||3000);
 const BOT_TOKEN=process.env.BOT_TOKEN||"";
 const WEBAPP_URL=(process.env.WEBAPP_URL||"").replace(/\/$/,"");
 const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||"chido2026";
+
+function verifyTelegramInitData(initData){
+  if(!initData || !BOT_TOKEN) return null;
+  try{
+    const params=new URLSearchParams(initData);
+    const receivedHash=params.get("hash");
+    if(!receivedHash) return null;
+
+    params.delete("hash");
+    const dataCheckString=[...params.entries()]
+      .sort(([a],[b])=>a.localeCompare(b))
+      .map(([k,v])=>`${k}=${v}`)
+      .join("\n");
+
+    const secretKey=crypto
+      .createHmac("sha256","WebAppData")
+      .update(BOT_TOKEN)
+      .digest();
+
+    const calculatedHash=crypto
+      .createHmac("sha256",secretKey)
+      .update(dataCheckString)
+      .digest("hex");
+
+    const a=Buffer.from(calculatedHash,"hex");
+    const b=Buffer.from(receivedHash,"hex");
+    if(a.length!==b.length || !crypto.timingSafeEqual(a,b)) return null;
+
+    const authDate=Number(params.get("auth_date")||0);
+    if(!authDate || (Date.now()/1000-authDate)>86400) return null;
+
+    const rawUser=params.get("user");
+    if(!rawUser) return null;
+    return JSON.parse(rawUser);
+  }catch(e){
+    console.error("Telegram initData verify error:",e.message);
+    return null;
+  }
+}
 
 function money(v){return Number(v).toLocaleString("uz-UZ")+" so‘m"}
 function orderId(){return Date.now().toString().slice(-7)+Math.floor(10+Math.random()*90)}
@@ -158,11 +198,15 @@ app.post("/api/orders",async(req,res)=>{
 
     if(!items.length)return res.status(400).json({error:"Mahsulot topilmadi."});
 
+    const tgUser=verifyTelegramInitData(b.initData);
+
     const order=await db.createOrder({
       id:orderId(),
-      userId:b.userId||null,
-      username:b.username||null,
-      customerName:b.customerName||"Mijoz",
+      userId:tgUser?.id||b.userId||null,
+      username:tgUser?.username||b.username||null,
+      customerName:tgUser
+        ? ([tgUser.first_name,tgUser.last_name].filter(Boolean).join(" ")||"Mijoz")
+        : (b.customerName||"Mijoz"),
       phone:String(b.phone),
       branch:b.branch,
       type:b.type,
@@ -364,7 +408,7 @@ app.get("/health",async(req,res)=>{
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.0.0"
+      webappUrl:WEBAPP_URL||null,version:"5.1.0"
     })
   }
 });

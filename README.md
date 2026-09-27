@@ -56,3 +56,7 @@ v5 seed jarayoni admin paneldagi o‘zgartirishlarni deploy/restart vaqtida qayt
 
 Yangi SQL jadvali: `promotions`.
 `products` jadvaliga `image_url` ustuni avtomatik qo‘shiladi.
+
+
+## v5.1 — Buyurtmalarim fix
+Mini App endi Telegram initData'ni serverga yuboradi. Server BOT_TOKEN bilan tekshiradi va haqiqiy Telegram user ID'ni buyurtmaga saqlaydi. Patchdan keyin berilgan yangi buyurtmalar `📦 Buyurtmalarim` bo'limida ko'rinadi.
