@@ -131,6 +131,7 @@ async function submitOrder() {
     userId: user?.id || null,
     username: user?.username || null,
     customerName: [user?.first_name, user?.last_name].filter(Boolean).join(" ") || "Mijoz",
+    initData: tg?.initData || "",
     phone: $("#phone").value.trim(),
     branch: $("#branch").value,
     type: $("#orderType").value,
