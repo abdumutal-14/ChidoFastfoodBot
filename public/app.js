@@ -127,6 +127,12 @@ function buildItems() {
 async function submitOrder() {
   $("#checkoutError").textContent = "";
   const user = tg?.initDataUnsafe?.user;
+
+  if (!tg?.initData || !user?.id) {
+    $("#checkoutError").textContent =
+      "Telegram foydalanuvchisi aniqlanmadi. Mini Appni yoping, botga /start yuboring va xabardagi yangi “🍔 MENYU / BUYURTMA” tugmasidan qayta oching.";
+    return;
+  }
   const payload = {
     userId: user?.id || null,
     username: user?.username || null,
