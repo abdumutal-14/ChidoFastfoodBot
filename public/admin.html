@@ -129,7 +129,7 @@ th{background:#fafbfc;color:#666d78;font-size:12px}
 <body>
 <header>
   <div class="brand"><b>🍔 Chido Admin Pro</b><span>v5</span></div>
-  <div id="topInfo" class="sub"></div>
+  <div><span id="audienceInfo" class="sub" style="margin-right:14px"></span><span id="topInfo" class="sub"></span></div>
 </header>
 
 <div id="loginView" class="login">
@@ -215,6 +215,7 @@ th{background:#fafbfc;color:#666d78;font-size:12px}
 
     <section id="page-promotions" class="page">
       <div style="display:flex;justify-content:space-between;align-items:center"><h1>Aksiyalar</h1><button class="btn red" id="addPromoBtn">+ Aksiya</button></div>
+      <div class="sub" style="margin:-8px 0 14px">📢 Broadcast bir foydalanuvchiga shu aksiya uchun qayta yuborilmaydi. Yuborishdan oldin tasdiq so‘raladi.</div>
       <div class="tablewrap"><table><thead><tr><th>Badge</th><th>Nomi</th><th>Davr</th><th>Holat</th><th>Amal</th></tr></thead><tbody id="promotionsBody"></tbody></table></div>
     </section>
   </main>
@@ -275,9 +276,16 @@ async function login(){
 }
 
 async function refreshAll(){
-  const [o,c]=await Promise.all([api("/api/admin/orders"),api("/api/admin/catalog")]);
+  const [o,c,u]=await Promise.all([
+    api("/api/admin/orders"),
+    api("/api/admin/catalog"),
+    api("/api/admin/users/stats").catch(()=>({stats:{active:0,total:0}}))
+  ]);
   ordersData=o.orders; statsData=o.stats; catalog=c;
   $("#topInfo").textContent=`${ordersData.length} ta buyurtma`;
+  if($("#audienceInfo")){
+    $("#audienceInfo").textContent=`👥 ${u.stats?.active||0} faol foydalanuvchi`;
+  }
   renderDashboard(); renderOrders(); renderCatalog();
 }
 
@@ -356,10 +364,25 @@ function renderBranches(){
 }
 function renderPromotions(){
   $("#promotionsBody").innerHTML=catalog.promotions.map(p=>`
-    <tr><td><span class="badge red">${esc(p.badge||"AKSIYA")}</span></td><td><b>${esc(p.title)}</b><br><span class="sub">${esc(p.description||"")}</span></td>
-    <td>${p.starts_at?new Date(p.starts_at).toLocaleString():"—"}<br>${p.ends_at?new Date(p.ends_at).toLocaleString():"—"}</td>
-    <td><span class="badge ${p.is_active?"on":"off"}">${p.is_active?"Faol":"O‘chiq"}</span></td>
-    <td><button class="btn soft" onclick="editPromo(${p.id})">Tahrirlash</button> <button class="btn danger" onclick="deletePromo(${p.id})">O‘chirish</button></td></tr>`).join("");
+    <tr>
+      <td><span class="badge red">${esc(p.badge||"AKSIYA")}</span></td>
+      <td>
+        <b>${esc(p.title)}</b><br>
+        <span class="sub">${esc(p.description||"")}</span>
+      </td>
+      <td>
+        ${p.starts_at?new Date(p.starts_at).toLocaleString():"—"}<br>
+        ${p.ends_at?new Date(p.ends_at).toLocaleString():"—"}
+      </td>
+      <td>
+        <span class="badge ${p.is_active?"on":"off"}">${p.is_active?"Faol":"O‘chiq"}</span>
+      </td>
+      <td>
+        <button class="btn red" onclick="broadcastPromo(${p.id})">📢 Hammaga yuborish</button>
+        <button class="btn soft" onclick="editPromo(${p.id})">Tahrirlash</button>
+        <button class="btn danger" onclick="deletePromo(${p.id})">O‘chirish</button>
+      </td>
+    </tr>`).join("");
 }
 
 function modal(title,html){$("#modalTitle").textContent=title;$("#modalContent").innerHTML=html;$("#modal").classList.add("show")}
@@ -702,6 +725,48 @@ function updatePromoPreview(){
   if($("#promoPreviewTitle"))$("#promoPreviewTitle").textContent=title;
   if($("#promoPreviewBadge"))$("#promoPreviewBadge").textContent=badge;
   if($("#promoPreviewDesc"))$("#promoPreviewDesc").textContent=desc;
+}
+
+
+async function broadcastPromo(id){
+  const promo=catalog.promotions.find(x=>x.id===id);
+  if(!promo)return;
+
+  const ok=confirm(
+    `“${promo.title}” aksiyasini barcha faol foydalanuvchilarga yuborilsinmi?\n\n`+
+    `Bu amal Telegram orqali ommaviy xabar yuboradi.`
+  );
+  if(!ok)return;
+
+  try{
+    const btns=[...document.querySelectorAll("button")];
+    btns.forEach(b=>{
+      if(b.getAttribute("onclick")===`broadcastPromo(${id})`){
+        b.disabled=true;
+        b.textContent="📤 Yuborilmoqda...";
+      }
+    });
+
+    const result=await api(`/api/admin/promotions/${id}/broadcast`,{
+      method:"POST",
+      body:JSON.stringify({force:false})
+    });
+
+    alert(
+      `Broadcast tugadi ✅\n\n`+
+      `Auditoriya: ${result.audience}\n`+
+      `Yuborildi: ${result.sent}\n`+
+      `Oldin yuborilgan: ${result.skipped}\n`+
+      `Xato: ${result.failed}\n`+
+      `Botni bloklagan/deaktiv: ${result.blocked}`
+    );
+
+    await refreshAll();
+  }catch(e){
+    alert(e.message);
+  }finally{
+    renderPromotions();
+  }
 }
 
 async function deletePromo(id){if(confirm("Aksiyani o‘chirasizmi?")){await api(`/api/admin/promotions/${id}`,{method:"DELETE"});await refreshAll()}}
