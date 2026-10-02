@@ -101,3 +101,14 @@ v5.2:
 - Aksiya oynasining pastida demo post preview bor.
 - Nomi, badge va tavsif yozilishi bilan preview real vaqtda yangilanadi.
 - Rasm tanlanganda preview’da darhol ko‘rinadi.
+
+
+## v5.6 — Mahsulot rasmi galereyadan + demo preview
+
+- `Yangi mahsulot` oynasida `Rasm URL` olib tashlandi.
+- Rasm galereya/file orqali tanlanadi.
+- JPG, PNG, WEBP, GIF; maksimum 5 MB.
+- Rasm mavjud `media_files` tizimi orqali PostgreSQL'da saqlanadi.
+- Oynaning pastida Mini App mahsulot kartasiga o‘xshash demo preview bor.
+- Nom, narx, kategoriya, emoji, tavsif va mavjudlik o‘zgarganda preview real vaqtda yangilanadi.
+- Rasm tanlanganda preview’da darhol ko‘rinadi.

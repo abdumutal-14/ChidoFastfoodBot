@@ -474,13 +474,13 @@ app.get("/health",async(req,res)=>{
       database:true,
       databaseTime:h.now,
       webappUrl:WEBAPP_URL||null,
-      version:"5.5.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,
+      version:"5.6.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,productGalleryUpload:true,productLivePreview:true,
       telegramOrderHistoryFix:true,miniAppLaunchMode:"inline"
     })
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.5.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true
+      webappUrl:WEBAPP_URL||null,version:"5.6.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,productGalleryUpload:true,productLivePreview:true
     })
   }
 });
