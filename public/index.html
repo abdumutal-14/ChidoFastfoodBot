@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Chido Fastfood</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -56,8 +57,17 @@
       <label>Telefon raqam</label>
       <input id="phone" placeholder="+998 90 123 45 67" inputmode="tel">
 
-      <label id="addressLabel">Manzil</label>
-      <input id="address" placeholder="Masalan: 5-mavze, 12-uy">
+      <div id="locationSection">
+        <label>Yetkazib berish lokatsiyasi</label>
+        <div class="location-actions">
+          <button type="button" class="location-btn" id="useMyLocation">📍 Hozirgi lokatsiyam</button>
+          <button type="button" class="location-btn" id="openMapPicker">🗺 Xaritadan tanlash</button>
+        </div>
+        <div class="location-status" id="locationStatus">
+          Lokatsiya hali tanlanmagan
+        </div>
+        <a class="location-link hidden" id="locationMapLink" target="_blank" rel="noopener">Google Maps’da ko‘rish</a>
+      </div>
 
       <label>To‘lov</label>
       <select id="payment">
@@ -73,6 +83,20 @@
     </div>
   </div>
 
+
+  <div class="sheet hidden" id="mapSheet">
+    <div class="sheet-card map-sheet-card">
+      <div class="sheet-head">
+        <h2>Lokatsiyani tanlang</h2>
+        <button class="ghost" id="closeMapPicker">✕</button>
+      </div>
+      <p class="map-help">Xaritadagi kerakli joyni bosing. Marker o‘sha joyga ko‘chadi.</p>
+      <div id="locationMap"></div>
+      <div class="map-coordinates" id="mapCoordinates">Joy tanlanmagan</div>
+      <button class="primary" id="confirmMapLocation" disabled>📍 Shu joyni tanlash</button>
+    </div>
+  </div>
+
   <div class="sheet hidden" id="successSheet">
     <div class="sheet-card center">
       <div class="success-icon">✅</div>
@@ -82,6 +106,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="/app.js"></script>
 </body>
 </html>

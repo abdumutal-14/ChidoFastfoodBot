@@ -217,7 +217,7 @@ function renderOrders(){
       <td><b>#${o.id}</b><br><span class="sub">${esc(o.payment)}</span></td>
       <td><b>${esc(o.customerName)}</b><br><span class="sub">${esc(o.phone)}</span></td>
       <td>${o.items.map(x=>`${esc(x.name)} × ${x.qty}`).join("<br>")}${o.comment?`<br><span class="sub">💬 ${esc(o.comment)}</span>`:""}</td>
-      <td>${esc(o.branch)}<br><span class="sub">${o.type==="delivery"?"🚚 Yetkazib":"🏪 Olib ketish"}</span></td>
+      <td>${esc(o.branch)}<br><span class="sub">${o.type==="delivery"?"🚚 Yetkazib":"🏪 Olib ketish"}</span>${o.latitude!==null&&o.longitude!==null?`<br><a href="https://www.google.com/maps?q=${o.latitude},${o.longitude}" target="_blank" rel="noopener">🗺 Xaritada ochish</a>`:""}</td>
       <td><b>${money(o.total)}</b></td>
       <td><select onchange="saveStatus('${o.id}',this.value)">
         ${["accepted","cooking","courier","ready","completed","cancelled"].map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${statusText(s)}</option>`).join("")}

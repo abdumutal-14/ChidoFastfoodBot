@@ -41,3 +41,17 @@ textarea{min-height:80px;resize:vertical}.error{color:#c10026;font-size:13px}.ce
 @media(max-width:410px){.products{grid-template-columns:1fr}.product{min-height:180px}}
 
 .product-art img{width:100%;height:100%;object-fit:cover;border-radius:14px}
+
+
+.location-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.location-btn{border:1px solid var(--border);background:#fff;border-radius:12px;padding:12px 10px;font-weight:800;cursor:pointer;color:var(--text)}
+.location-btn:disabled{opacity:.6;cursor:wait}
+.location-status{margin-top:8px;border:1px dashed #d9dde5;background:#fafbfc;border-radius:12px;padding:11px 12px;font-size:13px;color:var(--muted);line-height:1.45}
+.location-status b{color:var(--text)}
+.location-link{display:inline-block;margin-top:8px;color:#1769d2;font-size:13px;font-weight:700;text-decoration:none}
+.hidden{display:none!important}
+.map-sheet-card{max-height:94vh}
+.map-help{font-size:13px;color:var(--muted);margin:0 0 10px}
+#locationMap{height:min(52vh,430px);width:100%;border-radius:16px;border:1px solid var(--border);overflow:hidden;margin-bottom:10px}
+.map-coordinates{font-size:13px;color:var(--muted);padding:8px 2px 12px}
+@media(max-width:430px){.location-actions{grid-template-columns:1fr}}

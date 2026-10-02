@@ -7,7 +7,9 @@ if (tg) {
 const state = {
   data: null,
   currentCategory: null,
-  cart: {}
+  cart: {},
+  deliveryLocation: null,
+  mapCandidate: null
 };
 
 const $ = s => document.querySelector(s);
@@ -124,6 +126,145 @@ function fillBranches() {
 function buildItems() {
   return Object.entries(state.cart).map(([id,qty]) => ({id:Number(id), qty}));
 }
+
+let locationMap = null;
+let locationMarker = null;
+
+function formatCoords(lat,lng) {
+  return `${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
+}
+
+function setDeliveryLocation(lat,lng,source="map") {
+  state.deliveryLocation = {
+    latitude:Number(lat),
+    longitude:Number(lng),
+    source
+  };
+
+  $("#locationStatus").innerHTML =
+    `✅ Lokatsiya tanlandi<br><b>${formatCoords(lat,lng)}</b>`;
+
+  const link = $("#locationMapLink");
+  link.href = `https://www.google.com/maps?q=${lat},${lng}`;
+  link.classList.remove("hidden");
+  tg?.HapticFeedback?.notificationOccurred?.("success");
+}
+
+function clearDeliveryLocation() {
+  state.deliveryLocation = null;
+  state.mapCandidate = null;
+  $("#locationStatus").textContent = "Lokatsiya hali tanlanmagan";
+  $("#locationMapLink").classList.add("hidden");
+}
+
+function requestCurrentLocation() {
+  const btn = $("#useMyLocation");
+  if (!navigator.geolocation) {
+    $("#checkoutError").textContent = "Qurilmangiz lokatsiya funksiyasini qo‘llamaydi. Xaritadan tanlang.";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "📍 Aniqlanmoqda...";
+  $("#checkoutError").textContent = "";
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      setDeliveryLocation(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        "current"
+      );
+      btn.disabled = false;
+      btn.textContent = "📍 Hozirgi lokatsiyam";
+    },
+    err => {
+      const msg =
+        err.code===1
+          ? "Lokatsiya ruxsati berilmadi. Xaritadan tanlashingiz mumkin."
+          : "Lokatsiyani aniqlab bo‘lmadi. Xaritadan tanlang.";
+      $("#checkoutError").textContent = msg;
+      btn.disabled = false;
+      btn.textContent = "📍 Hozirgi lokatsiyam";
+    },
+    {enableHighAccuracy:true,timeout:12000,maximumAge:60000}
+  );
+}
+
+function initLocationMap() {
+  if (!window.L) {
+    $("#mapCoordinates").textContent = "Xarita yuklanmadi. Internetni tekshiring.";
+    return;
+  }
+
+  if (!locationMap) {
+    const defaultCenter = state.deliveryLocation
+      ? [state.deliveryLocation.latitude,state.deliveryLocation.longitude]
+      : [41.0167,70.1436]; // Angren default center
+
+    locationMap = L.map("locationMap").setView(defaultCenter,14);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      maxZoom:19,
+      attribution:"© OpenStreetMap"
+    }).addTo(locationMap);
+
+    locationMap.on("click", e => {
+      state.mapCandidate = {
+        latitude:e.latlng.lat,
+        longitude:e.latlng.lng
+      };
+
+      if (!locationMarker) {
+        locationMarker = L.marker(e.latlng).addTo(locationMap);
+      } else {
+        locationMarker.setLatLng(e.latlng);
+      }
+
+      $("#mapCoordinates").textContent =
+        `Tanlangan joy: ${formatCoords(e.latlng.lat,e.latlng.lng)}`;
+      $("#confirmMapLocation").disabled = false;
+    });
+  }
+
+  if (state.deliveryLocation) {
+    const point=[state.deliveryLocation.latitude,state.deliveryLocation.longitude];
+    locationMap.setView(point,16);
+    if (!locationMarker) locationMarker=L.marker(point).addTo(locationMap);
+    else locationMarker.setLatLng(point);
+    state.mapCandidate={
+      latitude:state.deliveryLocation.latitude,
+      longitude:state.deliveryLocation.longitude
+    };
+    $("#mapCoordinates").textContent =
+      `Tanlangan joy: ${formatCoords(point[0],point[1])}`;
+    $("#confirmMapLocation").disabled=false;
+  } else {
+    $("#mapCoordinates").textContent="Xaritadan kerakli joyni bosing";
+    $("#confirmMapLocation").disabled=true;
+  }
+
+  setTimeout(()=>locationMap.invalidateSize(),120);
+}
+
+function openLocationMap() {
+  $("#mapSheet").classList.remove("hidden");
+  initLocationMap();
+
+  // If user allows current location, use it only to center the map.
+  if (!state.deliveryLocation && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        if (!locationMap) return;
+        locationMap.setView([pos.coords.latitude,pos.coords.longitude],16);
+      },
+      ()=>{},
+      {enableHighAccuracy:false,timeout:5000,maximumAge:120000}
+    );
+  }
+}
+
+
 async function submitOrder() {
   $("#checkoutError").textContent = "";
   const user = tg?.initDataUnsafe?.user;
@@ -141,7 +282,10 @@ async function submitOrder() {
     phone: $("#phone").value.trim(),
     branch: $("#branch").value,
     type: $("#orderType").value,
-    address: $("#orderType").value === "delivery" ? $("#address").value.trim() : "",
+    address: "",
+    latitude: $("#orderType").value === "delivery" ? state.deliveryLocation?.latitude ?? null : null,
+    longitude: $("#orderType").value === "delivery" ? state.deliveryLocation?.longitude ?? null : null,
+    locationSource: $("#orderType").value === "delivery" ? state.deliveryLocation?.source ?? "" : "",
     payment: $("#payment").value,
     comment: $("#comment").value.trim(),
     items: buildItems()
@@ -150,8 +294,8 @@ async function submitOrder() {
     $("#checkoutError").textContent = "Telefon raqamni kiriting.";
     return;
   }
-  if (payload.type === "delivery" && !payload.address) {
-    $("#checkoutError").textContent = "Yetkazib berish manzilini kiriting.";
+  if (payload.type === "delivery" && (!Number.isFinite(payload.latitude) || !Number.isFinite(payload.longitude))) {
+    $("#checkoutError").textContent = "Yetkazib berish uchun lokatsiyani tanlang.";
     return;
   }
   if (!payload.items.length) {
@@ -171,6 +315,7 @@ async function submitOrder() {
     if (!res.ok) throw new Error(data.error || "Xatolik");
 
     state.cart = {};
+    clearDeliveryLocation();
     updateCartCount();
     $("#checkoutSheet").classList.add("hidden");
     $("#successText").textContent = `Buyurtma #${data.order.id} • ${money(data.order.total)}`;
@@ -202,8 +347,21 @@ $("#successClose").onclick = () => {
 };
 $("#orderType").onchange = () => {
   const delivery = $("#orderType").value === "delivery";
-  $("#address").style.display = delivery ? "" : "none";
-  $("#addressLabel").style.display = delivery ? "" : "none";
+  $("#locationSection").style.display = delivery ? "" : "none";
+  if (!delivery) clearDeliveryLocation();
+};
+
+$("#useMyLocation").onclick = requestCurrentLocation;
+$("#openMapPicker").onclick = openLocationMap;
+$("#closeMapPicker").onclick = () => $("#mapSheet").classList.add("hidden");
+$("#confirmMapLocation").onclick = () => {
+  if (!state.mapCandidate) return;
+  setDeliveryLocation(
+    state.mapCandidate.latitude,
+    state.mapCandidate.longitude,
+    "map"
+  );
+  $("#mapSheet").classList.add("hidden");
 };
 
 load();
