@@ -44,6 +44,38 @@ th{background:#fafbfc;color:#666d78;font-size:12px}
 .empty{padding:30px;text-align:center;color:#7b818b}
 @media(max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}.twocol{grid-template-columns:1fr}}
 @media(max-width:760px){.layout{grid-template-columns:1fr}aside{position:sticky;top:56px;z-index:19;padding:8px;overflow:auto}.nav{flex-direction:row}.nav button{white-space:nowrap}main{padding:12px}.cards{grid-template-columns:1fr 1fr}.formgrid{grid-template-columns:1fr}}
+
+.promo-upload-box{
+  border:1px dashed #cfd5de;border-radius:12px;padding:12px;background:#fafbfc
+}
+.promo-upload-box input[type=file]{width:100%;padding:8px;background:#fff}
+.promo-preview-title{font-weight:900;margin:8px 0}
+.promo-preview-card{
+  border:1px solid #e5e8ee;background:#fff;border-radius:18px;
+  overflow:hidden;max-width:420px;box-shadow:0 8px 24px #10182812
+}
+.promo-preview-image-wrap{
+  height:210px;background:linear-gradient(135deg,#fff0f3,#ffe4e9);
+  position:relative;overflow:hidden
+}
+.promo-preview-image{width:100%;height:100%;object-fit:cover;display:block}
+.promo-preview-placeholder{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  color:#777;font-weight:800
+}
+.promo-preview-badge{
+  position:absolute;left:12px;top:12px;background:#ed0033;color:#fff;
+  padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900
+}
+.promo-preview-content{padding:14px}
+.promo-preview-name{font-size:20px;font-weight:900;margin-bottom:6px}
+.promo-preview-desc{font-size:13px;color:#707783;line-height:1.45;min-height:38px}
+.promo-preview-button{
+  margin-top:12px;background:#ed0033;color:#fff;border-radius:12px;
+  padding:11px;text-align:center;font-weight:900
+}
+.hidden{display:none!important}
+
 </style>
 </head>
 <body>
@@ -162,6 +194,24 @@ async function api(url,opt={}){
   if(!r.ok)throw new Error(d.error||"Xatolik");
   return d;
 }
+
+async function uploadImage(file){
+  if(!file) return "";
+  const fd=new FormData();
+  fd.append("image",file);
+
+  const r=await fetch("/api/admin/media",{
+    method:"POST",
+    headers:{"x-admin-password":password},
+    body:fd
+  });
+
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401)throw new Error("AUTH");
+  if(!r.ok)throw new Error(d.error||"Rasm yuklanmadi");
+  return d.url;
+}
+
 
 async function login(){
   password=$("#password").value||password;
@@ -325,24 +375,141 @@ async function deleteBranch(id){if(confirm("Filialni o‘chirasizmi?")){await ap
 
 function promoForm(p={}){
   const dt=v=>v?new Date(v).toISOString().slice(0,16):"";
+  window.__promoCurrentImageUrl=p.image_url||"";
+
   modal(p.id?"Aksiyani tahrirlash":"Yangi aksiya",`
     <div class="formgrid">
-      <div><label>Nomi</label><input id="pTitle" value="${esc(p.title||"")}"></div>
-      <div><label>Badge</label><input id="pBadge" value="${esc(p.badge||"AKSIYA")}"></div>
-      <div class="full"><label>Tavsif</label><textarea id="pDesc">${esc(p.description||"")}</textarea></div>
-      <div class="full"><label>Rasm URL</label><input id="pImage" value="${esc(p.image_url||"")}"></div>
-      <div><label>Boshlanish</label><input id="pStart" type="datetime-local" value="${dt(p.starts_at)}"></div>
-      <div><label>Tugash</label><input id="pEnd" type="datetime-local" value="${dt(p.ends_at)}"></div>
-      <div><label>Holat</label><select id="pActive"><option value="true" ${p.is_active!==false?"selected":""}>Faol</option><option value="false" ${p.is_active===false?"selected":""}>O‘chiq</option></select></div>
-      <div class="full"><button class="btn red" onclick="savePromo(${p.id||"null"})">Saqlash</button></div>
+      <div>
+        <label>Nomi</label>
+        <input id="pTitle" value="${esc(p.title||"")}" oninput="updatePromoPreview()">
+      </div>
+
+      <div>
+        <label>Badge</label>
+        <input id="pBadge" value="${esc(p.badge||"AKSIYA")}" oninput="updatePromoPreview()">
+      </div>
+
+      <div class="full">
+        <label>Tavsif</label>
+        <textarea id="pDesc" oninput="updatePromoPreview()">${esc(p.description||"")}</textarea>
+      </div>
+
+      <div class="full">
+        <label>Rasm</label>
+        <div class="promo-upload-box">
+          <input id="pImageFile" type="file"
+                 accept="image/jpeg,image/png,image/webp,image/gif"
+                 onchange="handlePromoFilePreview(event)">
+          <div class="sub">📷 Galereyadan rasm tanlang • JPG/PNG/WEBP/GIF • maksimum 5 MB</div>
+        </div>
+      </div>
+
+      <div>
+        <label>Boshlanish</label>
+        <input id="pStart" type="datetime-local" value="${dt(p.starts_at)}">
+      </div>
+
+      <div>
+        <label>Tugash</label>
+        <input id="pEnd" type="datetime-local" value="${dt(p.ends_at)}">
+      </div>
+
+      <div>
+        <label>Holat</label>
+        <select id="pActive">
+          <option value="true" ${p.is_active!==false?"selected":""}>Faol</option>
+          <option value="false" ${p.is_active===false?"selected":""}>O‘chiq</option>
+        </select>
+      </div>
+
+      <div class="full">
+        <div class="promo-preview-title">Demo post ko‘rinishi</div>
+        <div class="promo-preview-card">
+          <div class="promo-preview-image-wrap">
+            <img id="promoPreviewImage"
+                 class="promo-preview-image ${p.image_url?"":"hidden"}"
+                 src="${esc(p.image_url||"")}" alt="">
+            <div id="promoPreviewPlaceholder"
+                 class="promo-preview-placeholder ${p.image_url?"hidden":""}">
+              🖼 Rasm tanlanmagan
+            </div>
+            <div id="promoPreviewBadge" class="promo-preview-badge">${esc(p.badge||"AKSIYA")}</div>
+          </div>
+          <div class="promo-preview-content">
+            <div id="promoPreviewTitle" class="promo-preview-name">${esc(p.title||"Aksiya nomi")}</div>
+            <div id="promoPreviewDesc" class="promo-preview-desc">${esc(p.description||"Aksiya tavsifi shu yerda ko‘rinadi")}</div>
+            <div class="promo-preview-button">Batafsil</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="full">
+        <button class="btn red" onclick="savePromo(${p.id||"null"})">Saqlash</button>
+      </div>
     </div>`);
 }
 function editPromo(id){promoForm(catalog.promotions.find(x=>x.id===id))}
 async function savePromo(id){
-  const body={title:$("#pTitle").value,badge:$("#pBadge").value,description:$("#pDesc").value,image_url:$("#pImage").value,starts_at:$("#pStart").value||null,ends_at:$("#pEnd").value||null,is_active:$("#pActive").value==="true"};
-  await api(id?`/api/admin/promotions/${id}`:"/api/admin/promotions",{method:id?"PUT":"POST",body:JSON.stringify(body)});
-  closeModal();await refreshAll();
+  try{
+    let imageUrl=window.__promoCurrentImageUrl||"";
+    const file=$("#pImageFile")?.files?.[0];
+
+    if(file){
+      imageUrl=await uploadImage(file);
+    }
+
+    const body={
+      title:$("#pTitle").value,
+      badge:$("#pBadge").value,
+      description:$("#pDesc").value,
+      image_url:imageUrl,
+      starts_at:$("#pStart").value||null,
+      ends_at:$("#pEnd").value||null,
+      is_active:$("#pActive").value==="true"
+    };
+
+    await api(id?`/api/admin/promotions/${id}`:"/api/admin/promotions",{
+      method:id?"PUT":"POST",
+      body:JSON.stringify(body)
+    });
+
+    closeModal();
+    await refreshAll();
+  }catch(e){
+    alert(e.message);
+  }
 }
+
+function handlePromoFilePreview(event){
+  const file=event.target.files?.[0];
+  if(!file)return;
+
+  if(file.size>5*1024*1024){
+    alert("Rasm hajmi 5 MB dan oshmasligi kerak.");
+    event.target.value="";
+    return;
+  }
+
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=$("#promoPreviewImage");
+    img.src=e.target.result;
+    img.classList.remove("hidden");
+    $("#promoPreviewPlaceholder").classList.add("hidden");
+  };
+  reader.readAsDataURL(file);
+}
+
+function updatePromoPreview(){
+  const title=$("#pTitle")?.value?.trim()||"Aksiya nomi";
+  const badge=$("#pBadge")?.value?.trim()||"AKSIYA";
+  const desc=$("#pDesc")?.value?.trim()||"Aksiya tavsifi shu yerda ko‘rinadi";
+
+  if($("#promoPreviewTitle"))$("#promoPreviewTitle").textContent=title;
+  if($("#promoPreviewBadge"))$("#promoPreviewBadge").textContent=badge;
+  if($("#promoPreviewDesc"))$("#promoPreviewDesc").textContent=desc;
+}
+
 async function deletePromo(id){if(confirm("Aksiyani o‘chirasizmi?")){await api(`/api/admin/promotions/${id}`,{method:"DELETE"});await refreshAll()}}
 
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
