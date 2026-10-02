@@ -85,6 +85,10 @@ async function initDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS location_source TEXT DEFAULT '';
+
     CREATE TABLE IF NOT EXISTS order_items (
       id BIGSERIAL PRIMARY KEY,
       order_id TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
@@ -221,6 +225,9 @@ function mapOrder(row, items=[]) {
     branch:row.branch_name,
     type:row.order_type,
     address:row.address||"",
+    latitude:row.latitude===null||row.latitude===undefined?null:Number(row.latitude),
+    longitude:row.longitude===null||row.longitude===undefined?null:Number(row.longitude),
+    locationSource:row.location_source||"",
     payment:row.payment,
     comment:row.comment||"",
     items:items.map(i=>({
@@ -258,12 +265,13 @@ async function createOrder(order, items) {
     await c.query(
       `INSERT INTO orders(
        id,telegram_user_id,username,customer_name,phone,branch_name,order_type,
-       address,payment,comment,total,delivery_fee,status
-      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+       address,latitude,longitude,location_source,payment,comment,total,delivery_fee,status
+      ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
         order.id,order.userId||null,order.username||null,order.customerName||"Mijoz",
-        order.phone,order.branch,order.type,order.address||"",order.payment,
-        order.comment||"",order.total,order.deliveryFee||0,order.status||"accepted"
+        order.phone,order.branch,order.type,order.address||"",
+        order.latitude??null,order.longitude??null,order.locationSource||"",
+        order.payment,order.comment||"",order.total,order.deliveryFee||0,order.status||"accepted"
       ]
     );
 

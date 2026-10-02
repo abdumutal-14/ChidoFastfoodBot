@@ -199,6 +199,14 @@ app.post("/api/orders",async(req,res)=>{
       return res.status(400).json({error:"Buyurtma ma’lumotlari to‘liq emas."});
     }
 
+    if(b.type==="delivery"){
+      const lat=Number(b.latitude);
+      const lng=Number(b.longitude);
+      if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat<-90||lat>90||lng<-180||lng>180){
+        return res.status(400).json({error:"Yetkazib berish uchun lokatsiyani tanlang."});
+      }
+    }
+
     const ids=[...new Set(requested.map(x=>Number(x.id)).filter(Number.isInteger))];
     const products=await db.getProductsByIds(ids);
 
@@ -228,6 +236,9 @@ app.post("/api/orders",async(req,res)=>{
       branch:b.branch,
       type:b.type,
       address:b.address||"",
+      latitude:b.type==="delivery"?Number(b.latitude):null,
+      longitude:b.type==="delivery"?Number(b.longitude):null,
+      locationSource:b.type==="delivery"?(b.locationSource||"map"): "",
       payment:b.payment,
       comment:b.comment||"",
       total,
@@ -249,6 +260,9 @@ app.post("/api/orders",async(req,res)=>{
           `🚚 ${order.type==="delivery"?"Yetkazib berish — BEPUL":"Olib ketish"}\n`+
           `💳 ${order.payment}\n`+
           `${order.address?`📍 ${order.address}\n`:""}`+
+          `${order.latitude!==null&&order.longitude!==null
+            ? `🗺 Lokatsiya: https://www.google.com/maps?q=${order.latitude},${order.longitude}\n`
+            : ""}`+
           `${order.comment?`💬 ${order.comment}\n`:""}\n`;
 
         txt+=items.map((x,i)=>`${i+1}. ${x.name} — ${x.qty} × ${money(x.price)}`).join("\n");
@@ -420,13 +434,13 @@ app.get("/health",async(req,res)=>{
       database:true,
       databaseTime:h.now,
       webappUrl:WEBAPP_URL||null,
-      version:"5.2.0",
+      version:"5.4.0",deliveryLocation:true,
       telegramOrderHistoryFix:true,miniAppLaunchMode:"inline"
     })
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.2.0"
+      webappUrl:WEBAPP_URL||null,version:"5.4.0",deliveryLocation:true
     })
   }
 });

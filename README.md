@@ -78,3 +78,15 @@ v5.2:
 - Inline launch Telegram user ID ni `initData` orqali beradi.
 - Server initData ni BOT_TOKEN bilan tekshiradi.
 - Eski keyboard usulida ochilsa Mini App buyurtmani yubormaydi va qayta `/start` qilishni aytadi.
+
+
+## v5.4 — Delivery Map & Live Location
+
+- Buyurtma oynasidan qo‘lda manzil yozish olib tashlandi.
+- `📍 Hozirgi lokatsiyam` — telefon/browser geolocation orqali lokatsiyani oladi.
+- `🗺 Xaritadan tanlash` — OpenStreetMap xaritasidan joy tanlash imkonini beradi.
+- Yetkazib berish buyurtmasida lokatsiya majburiy.
+- Latitude/longitude PostgreSQL `orders` jadvaliga saqlanadi.
+- Admin Telegram guruhiga Google Maps link keladi.
+- Admin panelda buyurtma yonida `🗺 Xaritada ochish` chiqadi.
+- Pickup buyurtmalarida lokatsiya so‘ralmaydi.
