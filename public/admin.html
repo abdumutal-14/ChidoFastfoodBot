@@ -76,6 +76,54 @@ th{background:#fafbfc;color:#666d78;font-size:12px}
 }
 .hidden{display:none!important}
 
+
+.product-demo-card{
+  border:1px solid #e5e8ee;
+  background:#fff;
+  border-radius:18px;
+  overflow:hidden;
+  max-width:340px;
+  box-shadow:0 8px 24px #10182812
+}
+.product-demo-image-wrap{
+  height:190px;
+  background:linear-gradient(135deg,#fff0f3,#ffe4e9);
+  position:relative;
+  overflow:hidden
+}
+.product-demo-image{width:100%;height:100%;object-fit:cover;display:block}
+.product-demo-placeholder{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:68px
+}
+.product-demo-status{
+  position:absolute;top:12px;right:12px;
+  background:#eaf8ef;color:#17713d;
+  border-radius:999px;padding:6px 10px;
+  font-size:11px;font-weight:900
+}
+.product-demo-status.off{background:#fff0f3;color:#c6002a}
+.product-demo-content{padding:14px}
+.product-demo-category{
+  color:#8a9099;font-size:11px;font-weight:800;
+  text-transform:uppercase;margin-bottom:5px
+}
+.product-demo-name{font-size:19px;font-weight:900;margin-bottom:5px}
+.product-demo-desc{
+  color:#707783;font-size:13px;line-height:1.4;
+  min-height:38px
+}
+.product-demo-bottom{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin-top:12px
+}
+.product-demo-price{font-size:17px;font-weight:900}
+.product-demo-add{
+  background:#ed0033;color:#fff;border-radius:10px;
+  padding:9px 11px;font-size:12px;font-weight:900
+}
+
 </style>
 </head>
 <body>
@@ -318,25 +366,171 @@ function modal(title,html){$("#modalTitle").textContent=title;$("#modalContent")
 function closeModal(){$("#modal").classList.remove("show")}
 
 function productForm(p={}){
+  window.__productCurrentImageUrl=p.image_url||"";
+
   modal(p.id?"Mahsulotni tahrirlash":"Yangi mahsulot",`
     <div class="formgrid">
-      <div><label>Nomi</label><input id="fName" value="${esc(p.name||"")}"></div>
-      <div><label>Narxi</label><input id="fPrice" type="number" value="${p.price||0}"></div>
-      <div><label>Kategoriya</label><select id="fCategory">${catalog.categories.map(c=>`<option value="${c.slug}" ${p.category_slug===c.slug?"selected":""}>${esc(c.emoji)} ${esc(c.name)}</option>`).join("")}</select></div>
-      <div><label>Emoji</label><input id="fEmoji" value="${esc(p.emoji||"🍽️")}"></div>
-      <div class="full"><label>Tavsif</label><textarea id="fDesc">${esc(p.description||"")}</textarea></div>
-      <div class="full"><label>Rasm URL (ixtiyoriy)</label><input id="fImage" value="${esc(p.image_url||"")}"></div>
-      <div><label>Tartib</label><input id="fSort" type="number" value="${p.sort_order||0}"></div>
-      <div><label>Holat</label><select id="fActive"><option value="true" ${p.is_active!==false?"selected":""}>Mavjud</option><option value="false" ${p.is_active===false?"selected":""}>O‘chiq</option></select></div>
-      <div class="full"><button class="btn red" onclick="saveProduct(${p.id||"null"})">Saqlash</button></div>
+      <div>
+        <label>Nomi</label>
+        <input id="fName" value="${esc(p.name||"")}" oninput="updateProductPreview()">
+      </div>
+
+      <div>
+        <label>Narxi</label>
+        <input id="fPrice" type="number" value="${p.price||0}" oninput="updateProductPreview()">
+      </div>
+
+      <div>
+        <label>Kategoriya</label>
+        <select id="fCategory" onchange="updateProductPreview()">
+          ${catalog.categories.map(c=>`<option value="${c.slug}" ${p.category_slug===c.slug?"selected":""}>${esc(c.emoji)} ${esc(c.name)}</option>`).join("")}
+        </select>
+      </div>
+
+      <div>
+        <label>Emoji</label>
+        <input id="fEmoji" value="${esc(p.emoji||"🍽️")}" oninput="updateProductPreview()">
+      </div>
+
+      <div class="full">
+        <label>Tavsif</label>
+        <textarea id="fDesc" oninput="updateProductPreview()">${esc(p.description||"")}</textarea>
+      </div>
+
+      <div class="full">
+        <label>Mahsulot rasmi</label>
+        <div class="promo-upload-box">
+          <input id="fImageFile" type="file"
+                 accept="image/jpeg,image/png,image/webp,image/gif"
+                 onchange="handleProductFilePreview(event)">
+          <div class="sub">📷 Galereyadan rasm tanlang • JPG/PNG/WEBP/GIF • maksimum 5 MB</div>
+        </div>
+      </div>
+
+      <div>
+        <label>Tartib</label>
+        <input id="fSort" type="number" value="${p.sort_order||0}">
+      </div>
+
+      <div>
+        <label>Holat</label>
+        <select id="fActive" onchange="updateProductPreview()">
+          <option value="true" ${p.is_active!==false?"selected":""}>Mavjud</option>
+          <option value="false" ${p.is_active===false?"selected":""}>O‘chiq</option>
+        </select>
+      </div>
+
+      <div class="full">
+        <div class="promo-preview-title">Demo mahsulot ko‘rinishi</div>
+
+        <div class="product-demo-card">
+          <div class="product-demo-image-wrap">
+            <img id="productPreviewImage"
+                 class="product-demo-image ${p.image_url?"":"hidden"}"
+                 src="${esc(p.image_url||"")}" alt="">
+            <div id="productPreviewPlaceholder"
+                 class="product-demo-placeholder ${p.image_url?"hidden":""}">
+              <span id="productPreviewEmoji">${esc(p.emoji||"🍽️")}</span>
+            </div>
+            <div id="productPreviewStatus"
+                 class="product-demo-status ${p.is_active===false?"off":""}">
+              ${p.is_active===false?"Mavjud emas":"Mavjud"}
+            </div>
+          </div>
+
+          <div class="product-demo-content">
+            <div id="productPreviewCategory" class="product-demo-category">
+              ${esc(catalog.categories.find(c=>c.slug===p.category_slug)?.name||catalog.categories[0]?.name||"Kategoriya")}
+            </div>
+            <div id="productPreviewName" class="product-demo-name">${esc(p.name||"Mahsulot nomi")}</div>
+            <div id="productPreviewDesc" class="product-demo-desc">${esc(p.description||"Mahsulot tavsifi shu yerda ko‘rinadi")}</div>
+            <div class="product-demo-bottom">
+              <div id="productPreviewPrice" class="product-demo-price">${money(p.price||0)}</div>
+              <div class="product-demo-add">+ Savatchaga</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="full">
+        <button class="btn red" onclick="saveProduct(${p.id||"null"})">Saqlash</button>
+      </div>
     </div>`);
 }
 function editProduct(id){productForm(catalog.products.find(x=>x.id===id))}
 async function saveProduct(id){
-  const body={name:$("#fName").value,price:Number($("#fPrice").value),category_slug:$("#fCategory").value,emoji:$("#fEmoji").value,description:$("#fDesc").value,image_url:$("#fImage").value,sort_order:Number($("#fSort").value),is_active:$("#fActive").value==="true"};
-  await api(id?`/api/admin/products/${id}`:"/api/admin/products",{method:id?"PUT":"POST",body:JSON.stringify(body)});
-  closeModal();await refreshAll();
+  try{
+    let imageUrl=window.__productCurrentImageUrl||"";
+    const file=$("#fImageFile")?.files?.[0];
+
+    if(file){
+      imageUrl=await uploadImage(file);
+    }
+
+    const body={
+      name:$("#fName").value,
+      price:Number($("#fPrice").value),
+      category_slug:$("#fCategory").value,
+      emoji:$("#fEmoji").value,
+      description:$("#fDesc").value,
+      image_url:imageUrl,
+      sort_order:Number($("#fSort").value),
+      is_active:$("#fActive").value==="true"
+    };
+
+    await api(id?`/api/admin/products/${id}`:"/api/admin/products",{
+      method:id?"PUT":"POST",
+      body:JSON.stringify(body)
+    });
+
+    closeModal();
+    await refreshAll();
+  }catch(e){
+    alert(e.message);
+  }
 }
+
+function handleProductFilePreview(event){
+  const file=event.target.files?.[0];
+  if(!file)return;
+
+  if(file.size>5*1024*1024){
+    alert("Rasm hajmi 5 MB dan oshmasligi kerak.");
+    event.target.value="";
+    return;
+  }
+
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=$("#productPreviewImage");
+    img.src=e.target.result;
+    img.classList.remove("hidden");
+    $("#productPreviewPlaceholder").classList.add("hidden");
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateProductPreview(){
+  const name=$("#fName")?.value?.trim()||"Mahsulot nomi";
+  const desc=$("#fDesc")?.value?.trim()||"Mahsulot tavsifi shu yerda ko‘rinadi";
+  const price=Number($("#fPrice")?.value||0);
+  const emoji=$("#fEmoji")?.value?.trim()||"🍽️";
+  const active=$("#fActive")?.value==="true";
+  const categorySlug=$("#fCategory")?.value;
+  const category=catalog.categories.find(c=>c.slug===categorySlug);
+
+  if($("#productPreviewName"))$("#productPreviewName").textContent=name;
+  if($("#productPreviewDesc"))$("#productPreviewDesc").textContent=desc;
+  if($("#productPreviewPrice"))$("#productPreviewPrice").textContent=money(price);
+  if($("#productPreviewEmoji"))$("#productPreviewEmoji").textContent=emoji;
+  if($("#productPreviewCategory"))$("#productPreviewCategory").textContent=category?.name||"Kategoriya";
+
+  if($("#productPreviewStatus")){
+    $("#productPreviewStatus").textContent=active?"Mavjud":"Mavjud emas";
+    $("#productPreviewStatus").classList.toggle("off",!active);
+  }
+}
+
 async function deleteProduct(id){if(confirm("Mahsulotni o‘chirish/o‘chirish holatiga o‘tkazish?")){await api(`/api/admin/products/${id}`,{method:"DELETE"});await refreshAll()}}
 
 function categoryForm(c={}){
