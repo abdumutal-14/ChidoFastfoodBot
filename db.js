@@ -60,6 +60,14 @@ async function initDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS media_files (
+      id BIGSERIAL PRIMARY KEY,
+      filename TEXT NOT NULL DEFAULT 'image',
+      mime_type TEXT NOT NULL,
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT,
@@ -556,6 +564,25 @@ async function deletePromotion(id) {
   await pool.query(`DELETE FROM promotions WHERE id=$1`,[id]);
 }
 
+
+async function saveMedia(filename,mimeType,buffer) {
+  const row=(await pool.query(
+    `INSERT INTO media_files(filename,mime_type,data)
+     VALUES($1,$2,$3)
+     RETURNING id`,
+    [filename||"image",mimeType,buffer]
+  )).rows[0];
+  return Number(row.id);
+}
+
+async function getMedia(id) {
+  return (await pool.query(
+    `SELECT id,filename,mime_type,data,created_at
+     FROM media_files WHERE id=$1`,
+    [id]
+  )).rows[0]||null;
+}
+
 async function getSetting(key) {
   const row=(await pool.query(
     `SELECT value FROM app_settings WHERE key=$1`,
@@ -581,5 +608,5 @@ module.exports={
   pool,initDatabase,getMenuData,getProductsByIds,createOrder,listOrders,getUserOrders,
   updateOrderStatus,getStats,adminCatalog,createProduct,updateProduct,deleteProduct,
   createCategory,updateCategory,deleteCategory,createBranch,updateBranch,deleteBranch,
-  createPromotion,updatePromotion,deletePromotion,getSetting,setSetting,health
+  createPromotion,updatePromotion,deletePromotion,saveMedia,getMedia,getSetting,setSetting,health
 };

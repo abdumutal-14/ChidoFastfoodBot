@@ -90,3 +90,14 @@ v5.2:
 - Admin Telegram guruhiga Google Maps link keladi.
 - Admin panelda buyurtma yonida `🗺 Xaritada ochish` chiqadi.
 - Pickup buyurtmalarida lokatsiya so‘ralmaydi.
+
+
+## v5.5 — Aksiya rasmi galereyadan + demo preview
+
+- `Rasm URL` olib tashlandi.
+- Rasm galereya/file orqali tanlanadi.
+- JPG, PNG, WEBP, GIF; maksimum 5 MB.
+- Rasm PostgreSQL `media_files` jadvalida saqlanadi.
+- Aksiya oynasining pastida demo post preview bor.
+- Nomi, badge va tavsif yozilishi bilan preview real vaqtda yangilanadi.
+- Rasm tanlanganda preview’da darhol ko‘rinadi.

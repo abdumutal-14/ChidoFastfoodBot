@@ -4,6 +4,7 @@ const path=require("path");
 const crypto=require("crypto");
 const express=require("express");
 const {Telegraf,Markup}=require("telegraf");
+const multer=require("multer");
 const db=require("./db");
 
 const app=express();
@@ -14,6 +15,19 @@ const PORT=Number(process.env.PORT||3000);
 const BOT_TOKEN=process.env.BOT_TOKEN||"";
 const WEBAPP_URL=(process.env.WEBAPP_URL||"").replace(/\/$/,"");
 const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||"chido2026";
+
+const upload=multer({
+  storage:multer.memoryStorage(),
+  limits:{fileSize:5*1024*1024},
+  fileFilter:(req,file,cb)=>{
+    const allowed=["image/jpeg","image/png","image/webp","image/gif"];
+    if(!allowed.includes(file.mimetype)){
+      return cb(new Error("Faqat JPG, PNG, WEBP yoki GIF rasm yuklash mumkin."));
+    }
+    cb(null,true);
+  }
+});
+
 
 function verifyTelegramInitData(initData){
   if(!initData || !BOT_TOKEN) return null;
@@ -293,6 +307,32 @@ function requireAdmin(req,res,next){
   next();
 }
 
+
+// ---------- MEDIA ----------
+app.get("/api/media/:id",async(req,res)=>{
+  try{
+    const file=await db.getMedia(Number(req.params.id));
+    if(!file)return res.status(404).end();
+    res.setHeader("Content-Type",file.mime_type);
+    res.setHeader("Cache-Control","public, max-age=31536000, immutable");
+    res.send(file.data);
+  }catch(e){
+    console.error(e);
+    res.status(500).end();
+  }
+});
+
+app.post("/api/admin/media",requireAdmin,upload.single("image"),async(req,res)=>{
+  try{
+    if(!req.file)return res.status(400).json({error:"Rasm tanlanmagan."});
+    const id=await db.saveMedia(req.file.originalname,req.file.mimetype,req.file.buffer);
+    res.json({ok:true,id,url:`/api/media/${id}`});
+  }catch(e){
+    console.error(e);
+    res.status(400).json({error:e.message||"Rasm yuklanmadi."});
+  }
+});
+
 // ---------- ADMIN ORDERS ----------
 app.get("/api/admin/orders",requireAdmin,async(req,res)=>{
   try{
@@ -434,13 +474,13 @@ app.get("/health",async(req,res)=>{
       database:true,
       databaseTime:h.now,
       webappUrl:WEBAPP_URL||null,
-      version:"5.4.0",deliveryLocation:true,
+      version:"5.5.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,
       telegramOrderHistoryFix:true,miniAppLaunchMode:"inline"
     })
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.4.0",deliveryLocation:true
+      webappUrl:WEBAPP_URL||null,version:"5.5.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true
     })
   }
 });
