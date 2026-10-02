@@ -68,6 +68,28 @@ function verifyTelegramInitData(initData){
   }
 }
 
+
+function sleep(ms){
+  return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+function isTelegramBlockedError(err){
+  const code=err?.response?.error_code;
+  const desc=String(err?.response?.description||err?.message||"").toLowerCase();
+  return code===403 ||
+    desc.includes("bot was blocked") ||
+    desc.includes("user is deactivated") ||
+    desc.includes("chat not found") ||
+    desc.includes("forbidden");
+}
+
+function absoluteMediaUrl(url){
+  if(!url) return "";
+  if(/^https?:\/\//i.test(url)) return url;
+  if(!WEBAPP_URL) return url;
+  return `${WEBAPP_URL}${url.startsWith("/")?"":"/"}${url}`;
+}
+
 function money(v){return Number(v).toLocaleString("uz-UZ")+" so‘m"}
 function orderId(){return Date.now().toString().slice(-7)+Math.floor(10+Math.random()*90)}
 function statusLabel(s){
@@ -108,6 +130,16 @@ function setupBot(){
   if(!BOT_TOKEN)return;
 
   bot=new Telegraf(BOT_TOKEN);
+
+  bot.use(async(ctx,next)=>{
+    try{
+      if(ctx.from?.id) await db.upsertBotUser(ctx.from);
+    }catch(e){
+      console.error("bot_users upsert:",e.message);
+    }
+    return next();
+  });
+
 
   const mainKeyboard=()=>Markup.keyboard([
     ["📦 Buyurtmalarim","🔥 Aksiyalar"],
@@ -238,6 +270,9 @@ app.post("/api/orders",async(req,res)=>{
     if(!items.length)return res.status(400).json({error:"Mahsulot topilmadi."});
 
     const tgUser=verifyTelegramInitData(b.initData);
+    if(tgUser){
+      try{await db.upsertBotUser(tgUser)}catch(e){console.error("Mini App user save:",e.message)}
+    }
 
     const order=await db.createOrder({
       id:orderId(),
@@ -373,6 +408,115 @@ app.patch("/api/admin/orders/:id/status",requireAdmin,async(req,res)=>{
   }
 });
 
+
+// ---------- ADMIN PROMOTION BROADCAST ----------
+app.post("/api/admin/promotions/:id/broadcast",requireAdmin,async(req,res)=>{
+  try{
+    if(!bot){
+      return res.status(503).json({error:"Telegram bot ishlamayapti."});
+    }
+
+    const promotionId=Number(req.params.id);
+    const promotion=await db.getPromotionById(promotionId);
+    if(!promotion){
+      return res.status(404).json({error:"Aksiya topilmadi."});
+    }
+
+    const users=await db.listActiveBotUsers();
+    const force=req.body?.force===true;
+
+    let sent=0,failed=0,skipped=0,blocked=0;
+
+    for(const user of users){
+      try{
+        if(!force && await db.wasPromotionSentToUser(promotionId,user.userId)){
+          skipped++;
+          continue;
+        }
+
+        const title=`🔥 ${promotion.badge||"AKSIYA"}\n\n${promotion.title}`;
+        const text=[
+          title,
+          promotion.description||"",
+          promotion.ends_at
+            ? `\n⏳ Tugash: ${new Date(promotion.ends_at).toLocaleString("uz-UZ")}`
+            : ""
+        ].filter(Boolean).join("\n");
+
+        const keyboard=WEBAPP_URL
+          ? Markup.inlineKeyboard([
+              [Markup.button.webApp("🍔 Buyurtma berish",`${WEBAPP_URL}/`)]
+            ])
+          : undefined;
+
+        const imageUrl=absoluteMediaUrl(promotion.image_url);
+
+        if(imageUrl){
+          await bot.telegram.sendPhoto(
+            user.userId,
+            imageUrl,
+            {
+              caption:text.slice(0,1024),
+              ...(keyboard?keyboard:{})
+            }
+          );
+        }else{
+          await bot.telegram.sendMessage(
+            user.userId,
+            text.slice(0,4096),
+            keyboard||{}
+          );
+        }
+
+        await db.recordPromotionBroadcast(promotionId,user.userId,"sent","");
+        sent++;
+
+        // Stay safely below Telegram's broad broadcast rate limits.
+        await sleep(45);
+      }catch(e){
+        failed++;
+        const msg=String(e?.response?.description||e?.message||"Broadcast error");
+
+        if(isTelegramBlockedError(e)){
+          blocked++;
+          try{await db.markBotUserBlocked(user.userId)}catch(_){}
+        }
+
+        try{
+          await db.recordPromotionBroadcast(
+            promotionId,user.userId,"failed",msg.slice(0,500)
+          );
+        }catch(_){}
+
+        await sleep(60);
+      }
+    }
+
+    const stats=await db.getPromotionBroadcastStats(promotionId);
+    res.json({
+      ok:true,
+      promotionId,
+      audience:users.length,
+      sent,
+      failed,
+      skipped,
+      blocked,
+      stats
+    });
+  }catch(e){
+    console.error("Promotion broadcast:",e);
+    res.status(500).json({error:e.message||"Aksiyani yuborishda xatolik."});
+  }
+});
+
+app.get("/api/admin/users/stats",requireAdmin,async(req,res)=>{
+  try{
+    res.json({ok:true,stats:await db.getBotUserStats()});
+  }catch(e){
+    res.status(500).json({error:e.message});
+  }
+});
+
 // ---------- ADMIN CATALOG ----------
 app.get("/api/admin/catalog",requireAdmin,async(req,res)=>{
   try{res.json(await db.adminCatalog())}
@@ -474,13 +618,13 @@ app.get("/health",async(req,res)=>{
       database:true,
       databaseTime:h.now,
       webappUrl:WEBAPP_URL||null,
-      version:"5.6.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,productGalleryUpload:true,productLivePreview:true,
+      version:"5.7.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,productGalleryUpload:true,productLivePreview:true,promotionBroadcast:true,
       telegramOrderHistoryFix:true,miniAppLaunchMode:"inline"
     })
   }catch(e){
     res.status(500).json({
       ok:false,bot:!!bot,database:false,error:e.message,
-      webappUrl:WEBAPP_URL||null,version:"5.6.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,productGalleryUpload:true,productLivePreview:true
+      webappUrl:WEBAPP_URL||null,version:"5.7.0",deliveryLocation:true,promoGalleryUpload:true,promoLivePreview:true,productGalleryUpload:true,productLivePreview:true,promotionBroadcast:true
     })
   }
 });

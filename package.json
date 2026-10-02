@@ -1,8 +1,8 @@
 {
   "name": "chido-fastfood-bot-v2",
-  "version": "5.6.0",
+  "version": "5.7.0",
   "private": true,
-  "description": "Chido Fastfood v5.4 — map and live location delivery checkout",
+  "description": "Chido Fastfood v5.7 — promotions broadcast to all Telegram users",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

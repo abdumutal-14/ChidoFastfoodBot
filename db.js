@@ -68,6 +68,36 @@ async function initDatabase() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+
+    CREATE TABLE IF NOT EXISTS bot_users (
+      telegram_user_id BIGINT PRIMARY KEY,
+      username TEXT,
+      first_name TEXT,
+      last_name TEXT,
+      language_code TEXT,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      blocked_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS promotion_broadcasts (
+      id BIGSERIAL PRIMARY KEY,
+      promotion_id BIGINT NOT NULL REFERENCES promotions(id) ON DELETE CASCADE,
+      telegram_user_id BIGINT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'sent',
+      error_message TEXT DEFAULT '',
+      sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(promotion_id, telegram_user_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bot_users_active
+      ON bot_users(is_active, last_seen_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_promotion_broadcasts_promo
+      ON promotion_broadcasts(promotion_id, status);
+
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT,
@@ -583,6 +613,127 @@ async function getMedia(id) {
   )).rows[0]||null;
 }
 
+
+async function upsertBotUser(user) {
+  if(!user?.id) return;
+  await pool.query(
+    `INSERT INTO bot_users(
+      telegram_user_id,username,first_name,last_name,language_code,
+      is_active,blocked_at,created_at,updated_at,last_seen_at
+    ) VALUES($1,$2,$3,$4,$5,TRUE,NULL,NOW(),NOW(),NOW())
+    ON CONFLICT(telegram_user_id) DO UPDATE SET
+      username=EXCLUDED.username,
+      first_name=EXCLUDED.first_name,
+      last_name=EXCLUDED.last_name,
+      language_code=EXCLUDED.language_code,
+      is_active=TRUE,
+      blocked_at=NULL,
+      updated_at=NOW(),
+      last_seen_at=NOW()`,
+    [
+      user.id,
+      user.username||null,
+      user.first_name||null,
+      user.last_name||null,
+      user.language_code||null
+    ]
+  );
+}
+
+async function markBotUserBlocked(userId) {
+  await pool.query(
+    `UPDATE bot_users
+     SET is_active=FALSE, blocked_at=NOW(), updated_at=NOW()
+     WHERE telegram_user_id=$1`,
+    [userId]
+  );
+}
+
+async function listActiveBotUsers(limit=50000) {
+  const rows=(await pool.query(
+    `SELECT telegram_user_id,username,first_name,last_name,language_code
+     FROM bot_users
+     WHERE is_active=TRUE
+     ORDER BY last_seen_at DESC
+     LIMIT $1`,
+    [limit]
+  )).rows;
+
+  return rows.map(r=>({
+    userId:Number(r.telegram_user_id),
+    username:r.username,
+    firstName:r.first_name,
+    lastName:r.last_name,
+    languageCode:r.language_code
+  }));
+}
+
+async function getBotUserStats() {
+  const row=(await pool.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER(WHERE is_active=TRUE)::int AS active,
+      COUNT(*) FILTER(WHERE is_active=FALSE)::int AS inactive
+    FROM bot_users
+  `)).rows[0];
+
+  return {
+    total:Number(row.total),
+    active:Number(row.active),
+    inactive:Number(row.inactive)
+  };
+}
+
+async function getPromotionById(id) {
+  return (await pool.query(
+    `SELECT id,title,description,badge,image_url,is_active,starts_at,ends_at
+     FROM promotions WHERE id=$1`,
+    [id]
+  )).rows[0]||null;
+}
+
+async function wasPromotionSentToUser(promotionId,userId) {
+  const row=(await pool.query(
+    `SELECT 1 FROM promotion_broadcasts
+     WHERE promotion_id=$1 AND telegram_user_id=$2 AND status='sent'
+     LIMIT 1`,
+    [promotionId,userId]
+  )).rows[0];
+  return !!row;
+}
+
+async function recordPromotionBroadcast(promotionId,userId,status,errorMessage="") {
+  await pool.query(
+    `INSERT INTO promotion_broadcasts(
+      promotion_id,telegram_user_id,status,error_message,sent_at
+    ) VALUES($1,$2,$3,$4,NOW())
+    ON CONFLICT(promotion_id,telegram_user_id) DO UPDATE SET
+      status=EXCLUDED.status,
+      error_message=EXCLUDED.error_message,
+      sent_at=NOW()`,
+    [promotionId,userId,status,errorMessage||""]
+  );
+}
+
+async function getPromotionBroadcastStats(promotionId) {
+  const row=(await pool.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER(WHERE status='sent')::int AS sent,
+      COUNT(*) FILTER(WHERE status='failed')::int AS failed,
+      COUNT(*) FILTER(WHERE status='skipped')::int AS skipped
+    FROM promotion_broadcasts
+    WHERE promotion_id=$1
+  `,[promotionId])).rows[0];
+
+  return {
+    total:Number(row.total),
+    sent:Number(row.sent),
+    failed:Number(row.failed),
+    skipped:Number(row.skipped)
+  };
+}
+
 async function getSetting(key) {
   const row=(await pool.query(
     `SELECT value FROM app_settings WHERE key=$1`,
@@ -608,5 +759,5 @@ module.exports={
   pool,initDatabase,getMenuData,getProductsByIds,createOrder,listOrders,getUserOrders,
   updateOrderStatus,getStats,adminCatalog,createProduct,updateProduct,deleteProduct,
   createCategory,updateCategory,deleteCategory,createBranch,updateBranch,deleteBranch,
-  createPromotion,updatePromotion,deletePromotion,saveMedia,getMedia,getSetting,setSetting,health
+  createPromotion,updatePromotion,deletePromotion,saveMedia,getMedia,upsertBotUser,markBotUserBlocked,listActiveBotUsers,getBotUserStats,getPromotionById,wasPromotionSentToUser,recordPromotionBroadcast,getPromotionBroadcastStats,getSetting,setSetting,health
 };

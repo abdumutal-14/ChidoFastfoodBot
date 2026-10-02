@@ -112,3 +112,17 @@ v5.2:
 - Oynaning pastida Mini App mahsulot kartasiga o‘xshash demo preview bor.
 - Nom, narx, kategoriya, emoji, tavsif va mavjudlik o‘zgarganda preview real vaqtda yangilanadi.
 - Rasm tanlanganda preview’da darhol ko‘rinadi.
+
+
+## v5.7 — Aksiya broadcast
+
+- Bot bilan muloqot qilgan har bir Telegram foydalanuvchisi `bot_users` jadvaliga saqlanadi.
+- Admin panel `Aksiyalar` bo‘limida `📢 Hammaga yuborish` tugmasi bor.
+- Yuborishdan oldin tasdiq oynasi chiqadi.
+- Rasm bo‘lsa Telegram post rasm + caption ko‘rinishida yuboriladi.
+- Rasm bo‘lmasa text post yuboriladi.
+- Postda `🍔 Buyurtma berish` Mini App tugmasi bor.
+- Bir aksiya bir foydalanuvchiga qayta yuborilmaydi.
+- Botni bloklagan yoki deaktiv foydalanuvchilar avtomatik inactive qilinadi.
+- Admin panel tepasida faol foydalanuvchilar soni ko‘rinadi.
+- Broadcast natijasi: auditoriya, yuborilgan, oldin yuborilgan, xato va bloklaganlar soni.
